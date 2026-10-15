@@ -627,17 +627,72 @@ html.js .rv.d1{transition-delay:.1s}html.js .rv.d2{transition-delay:.2s}
 
 <script>
 (function(){
-  /* ---- Paste the Calendly link here once it exists ---- */
+  /* ================= SETTINGS ================= */
+  /* Calendly booking link, e.g. "https://calendly.com/rimucoachworks/consultation" */
   var CALENDLY_URL = "";
-  /* ---- And the Ghibli build page, once it's hosted ---- */
+  /* Links to other pages, once they're hosted */
   var LINKS = { ghibli: "", huckleberry: "", pickup: "" };
+  /* Google tag IDs: the Google Ads ID ("AW-...") and, if used, Google Analytics ("G-...") */
+  var GOOGLE_TAG_IDS = [];
+  /* Google Ads conversion actions, each "AW-.../label" from Google Ads */
+  var ADS_CONVERSIONS = {
+    consultation_booked: "",   /* a consultation is booked in Calendly (the main one) */
+    book_click: "",            /* a Book button is tapped */
+    email_click: ""            /* the workshop email link is tapped */
+  };
+  /* ============================================ */
+
+  /* ---- Google tag: loads only once an ID is set above ---- */
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  if (GOOGLE_TAG_IDS.length) {
+    var gs = document.createElement('script'); gs.async = true;
+    gs.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GOOGLE_TAG_IDS[0]);
+    document.head.appendChild(gs);
+    gtag('js', new Date());
+    GOOGLE_TAG_IDS.forEach(function(id){ gtag('config', id); });
+  }
+  var sent = {};
+  function track(name){
+    if (!GOOGLE_TAG_IDS.length) return;
+    gtag('event', name);
+    if (name === 'consultation_booked') gtag('event', 'generate_lead');
+    var conv = ADS_CONVERSIONS[name];
+    if (conv && !(name === 'consultation_booked' && sent[name])) {
+      gtag('event', 'conversion', { send_to: conv });
+      sent[name] = true;
+    }
+  }
 
   function activate(el,url){
     el.href=url; el.removeAttribute('data-pending'); el.removeAttribute('aria-disabled');
     el.target="_blank"; el.rel="noopener";
   }
-  if(CALENDLY_URL){ document.querySelectorAll('[data-book]').forEach(function(a){activate(a,CALENDLY_URL)}); }
   document.querySelectorAll('[data-link]').forEach(function(a){ var u=LINKS[a.getAttribute('data-link')]; if(u) activate(a,u); });
+
+  /* ---- Booking: opens Calendly over the page, so a completed booking can be counted ---- */
+  if (CALENDLY_URL) {
+    document.querySelectorAll('[data-book]').forEach(function(a){ activate(a, CALENDLY_URL); });
+    var cl = document.createElement('link'); cl.rel = 'stylesheet';
+    cl.href = 'https://assets.calendly.com/assets/external/widget.css'; document.head.appendChild(cl);
+    var cs = document.createElement('script'); cs.async = true;
+    cs.src = 'https://assets.calendly.com/assets/external/widget.js'; document.head.appendChild(cs);
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('[data-book]'); if (!a) return;
+      track('book_click');
+      if (window.Calendly && Calendly.initPopupWidget) {
+        e.preventDefault();
+        Calendly.initPopupWidget({ url: CALENDLY_URL });
+      }
+    });
+    window.addEventListener('message', function(e){
+      if (e.origin !== 'https://calendly.com' || !e.data || e.data.event !== 'calendly.event_scheduled') return;
+      track('consultation_booked');
+    });
+  }
+  document.addEventListener('click', function(e){
+    var a = e.target.closest('a[href^="mailto:"]'); if (a) track('email_click');
+  });
 
   var head=document.getElementById('bar');
   document.addEventListener('click',function(e){
