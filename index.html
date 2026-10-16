@@ -633,7 +633,7 @@ html.js .rv.d1{transition-delay:.1s}html.js .rv.d2{transition-delay:.2s}
   /* Calendly booking link, e.g. "https://calendly.com/rimucoachworks/consultation" */
   var CALENDLY_URL = "";
   /* Links to other pages, once they're hosted */
-  var LINKS = { ghibli: "", huckleberry: "", pickup: "" };
+  var LINKS = { ghibli: "", huckleberry: "/huckleberry/", pickup: "" };
   /* Google tag IDs: the Google Ads ID ("AW-...") and, if used, Google Analytics ("G-...") */
   var GOOGLE_TAG_IDS = [];
   /* Google Ads conversion actions, each "AW-.../label" from Google Ads */
@@ -668,7 +668,7 @@ html.js .rv.d1{transition-delay:.1s}html.js .rv.d2{transition-delay:.2s}
 
   function activate(el,url){
     el.href=url; el.removeAttribute('data-pending'); el.removeAttribute('aria-disabled');
-    el.target="_blank"; el.rel="noopener";
+    if (/^https?:/.test(url)) { el.target="_blank"; el.rel="noopener"; }
   }
   document.querySelectorAll('[data-link]').forEach(function(a){ var u=LINKS[a.getAttribute('data-link')]; if(u) activate(a,u); });
 
